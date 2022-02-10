@@ -1,0 +1,3 @@
+const BookInfo = ({bookID}) => {
+    
+}
