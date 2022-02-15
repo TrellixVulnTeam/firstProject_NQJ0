@@ -15,27 +15,29 @@ const config_1 = require("@nestjs/config");
 const passport_1 = require("@nestjs/passport");
 const passport_jwt_1 = require("passport-jwt");
 const token_e_1 = require("../exceptions/token.e");
-const extractFromCookie = req => {
+const extractFromCookie = (req, config) => {
     let accessJWT = null;
-    if (req === null || req === void 0 ? void 0 : req.cookies) {
-        accessJWT = req.cookies['accessJWT'];
-    }
+    accessJWT = req === null || req === void 0 ? void 0 : req.cookies[config.get("ACCESS_JWT")];
+    if (!accessJWT)
+        throw new token_e_1.AccessTokenException();
     return accessJWT;
 };
 let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy, 'accessJWT') {
-    constructor(configService) {
+    constructor(config) {
         super({
-            jwtFromRequest: extractFromCookie,
+            jwtFromRequest: (req) => extractFromCookie(req, config),
             ignoreExpiration: true,
-            secretOrKey: configService.get('SECRET_KEY'),
+            secretOrKey: config.get('SECRET_KEY'),
         });
-        this.configService = configService;
+        this.config = config;
     }
     async validate(payload) {
         if (payload.exp * 1000 < Date.now()) {
-            throw new token_e_1.TokenException();
+            throw new token_e_1.AccessTokenException();
         }
-        return { userID: payload.userID, nickname: payload.sub };
+        else {
+            return { userID: payload.userID, nickname: payload.sub };
+        }
     }
 };
 JwtStrategy = __decorate([

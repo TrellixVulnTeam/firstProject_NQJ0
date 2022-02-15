@@ -13,7 +13,6 @@ exports.JwtAuthGuard = void 0;
 const common_1 = require("@nestjs/common");
 const core_1 = require("@nestjs/core");
 const passport_1 = require("@nestjs/passport");
-const role_enum_1 = require("../../enums/role.enum");
 let JwtAuthGuard = class JwtAuthGuard extends (0, passport_1.AuthGuard)('accessJWT') {
     constructor(reflector) {
         super();

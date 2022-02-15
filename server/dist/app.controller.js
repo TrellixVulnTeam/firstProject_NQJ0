@@ -11,28 +11,15 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppController = void 0;
 const common_1 = require("@nestjs/common");
-const config_1 = require("@nestjs/config");
 const app_service_1 = require("./app.service");
 let AppController = class AppController {
-    constructor(appService, configService) {
+    constructor(appService) {
         this.appService = appService;
-        this.configService = configService;
-    }
-    async getPageBookInfo() {
-        return { message: "Hello, World!" };
     }
 };
-__decorate([
-    (0, common_1.Get)('/page/bookinfo'),
-    (0, common_1.Render)('bookinfo'),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", Promise)
-], AppController.prototype, "getPageBookInfo", null);
 AppController = __decorate([
     (0, common_1.Controller)(),
-    __metadata("design:paramtypes", [app_service_1.AppService,
-        config_1.ConfigService])
+    __metadata("design:paramtypes", [app_service_1.AppService])
 ], AppController);
 exports.AppController = AppController;
 //# sourceMappingURL=app.controller.js.map

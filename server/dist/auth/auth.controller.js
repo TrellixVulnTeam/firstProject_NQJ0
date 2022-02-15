@@ -15,17 +15,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthController = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
-const fs = require("fs");
-const path = require("path");
 const jwt_refresh_guard_1 = require("./strategy/jwt-refresh.guard");
 const local_auth_guard_1 = require("./strategy/local-auth.guard");
 const auth_service_1 = require("./auth.service");
 const jwt = require("jsonwebtoken");
 const jwt_access_guard_1 = require("./strategy/jwt-access.guard");
+const token_f_1 = require("./exceptions/token.f");
+const JWTInterceptor_1 = require("../interceptors/JWTInterceptor");
 let AuthController = class AuthController {
-    constructor(authService, configService) {
+    constructor(authService, config) {
         this.authService = authService;
-        this.configService = configService;
+        this.config = config;
         this.handleRefreshToken = authService.handleRefreshToken();
     }
     async getUserID(req, res) {
@@ -35,9 +35,9 @@ let AuthController = class AuthController {
         try {
             const refreshToken = await this.handleRefreshToken.issueToken(req.user);
             const accessToken = await this.authService.issueAccessToken(req.user);
-            res.cookie('accessJWT', accessToken, {
+            res.cookie(this.config.get("ACCESS_JWT"), accessToken, {
                 sameSite: 'lax',
-            }).cookie('refreshJWT', refreshToken, {
+            }).cookie(this.config.get("REFRESH_JWT"), refreshToken, {
                 path: '/auth/jwt',
                 sameSite: 'lax',
             }).send();
@@ -50,21 +50,20 @@ let AuthController = class AuthController {
         const user = jwt.decode(req.cookies.accessJWT);
         if (user)
             this.authService.handleRefreshToken().deleteToken(user);
-        res.clearCookie('accessJWT')
-            .clearCookie('refreshJWT', { path: "/auth/jwt" }).send();
+        res.clearCookie(this.config.get("ACCESS_JWT"))
+            .clearCookie(this.config.get("REFRESH_JWT"), { path: "/auth/jwt" }).send();
     }
     async issueAccessToken(req, res) {
         const accessToken = await this.authService.issueAccessToken(req.user);
-        res.cookie('accessJWT', accessToken, {
-            sameSite: 'lax'
-        }).send();
-    }
-    async getPage(params) {
-        try {
-            return fs.readFileSync(path.join(this.configService.get('ROOT_PATH'), `/html/auth.${params.page}.html`)).toString('utf-8');
+        if (req.query.method === "GET") {
+            res.cookie(this.config.get("ACCESS_JWT"), accessToken, {
+                sameSite: 'lax'
+            }).redirect(req.query.location);
         }
-        catch (e) {
-            throw new common_1.NotFoundException();
+        else {
+            res.cookie(this.config.get("ACCESS_JWT"), accessToken, {
+                sameSite: 'lax'
+            }).status(202).send();
         }
     }
 };
@@ -98,6 +97,7 @@ __decorate([
 ], AuthController.prototype, "logoutUser", null);
 __decorate([
     (0, common_1.UseGuards)(jwt_refresh_guard_1.JwtRefreshGuard),
+    (0, common_1.UseFilters)(token_f_1.RefreshTokenExceptionFilter),
     (0, common_1.Get)('/jwt'),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Res)()),
@@ -105,13 +105,6 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "issueAccessToken", null);
-__decorate([
-    (0, common_1.Get)('/:page'),
-    __param(0, (0, common_1.Param)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], AuthController.prototype, "getPage", null);
 AuthController = __decorate([
     (0, common_1.Controller)('auth'),
     __metadata("design:paramtypes", [auth_service_1.AuthService,

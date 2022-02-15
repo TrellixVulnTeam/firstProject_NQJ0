@@ -5,7 +5,7 @@ export declare class AuthorsController {
     private authorsService;
     private configService;
     constructor(authorsService: AuthorsService, configService: ConfigService);
-    getAuthors(): Promise<import("../entities/authors.entity").AuthorsEntity[]>;
+    getAuthors(): Promise<any[]>;
     postAuthor(body: any): Promise<void>;
     getPage(params: any, res: Response): Promise<string>;
 }

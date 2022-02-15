@@ -5,12 +5,14 @@ import { Repository } from 'typeorm';
 import { LoginUserDto } from '../users/dto/users.dto';
 import { pbkdf2, pbkdf2Sync } from 'crypto';
 import { UsersEntity } from 'src/entities/users.entity';
+import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class AuthService {
     constructor(
         @InjectRepository(UsersEntity)
         private readonly usersRepository: Repository<UsersEntity>,
         private jwtService: JwtService,
+        private config: ConfigService,
     ) {}
 
     //로그인 시 DB의 정보와 request의 정보가 일치하는지 확인.
@@ -29,7 +31,7 @@ export class AuthService {
         //꼭 암호화해서 저장해야할까?
         const issueToken = async user => {
             const payload = { userID: user.userID, sub: user.nickname};
-            const refreshToken = this.jwtService.sign(payload, {expiresIn: '5s'});
+            const refreshToken = this.jwtService.sign(payload, {expiresIn: this.config.get("REFRESH_EXPIRE")});
             pbkdf2(refreshToken, user.userID, 100, 64, 'sha512', async (err, key) => {
                 if(err) {
                     throw err;
@@ -37,7 +39,7 @@ export class AuthService {
                 await this.usersRepository.createQueryBuilder()
                 .update()
                 .where(`userID = :keyID`, {keyID: user.userID})
-                .set({refreshJWT: key.toString('base64')})
+                .set({[this.config.get("REFRESH_JWT")]: key.toString('base64')})
                 .execute();
             });
             return refreshToken;
@@ -47,7 +49,7 @@ export class AuthService {
             await this.usersRepository.createQueryBuilder()
             .update()
             .where(`userID= :keyID`, {keyID: user.userID})
-            .set({refreshJWT: null})
+            .set({[this.config.get("REFRESH_JWT")]: null})
             .execute();
         }
 
@@ -55,10 +57,10 @@ export class AuthService {
         //같으면 true 및 user값, 틀리면 false 반환.
         const compareToken = async (user, token) => {
             const query = await this.usersRepository.createQueryBuilder()
-            .select(`refreshJWT`)
+            .select(this.config.get("REFRESH_JWT"))
             .where(`userID = :keyID`, {keyID: user.userID})
             .getRawOne();
-            const refreshToken = query['refreshJWT'];
+            const refreshToken = query[this.config.get("REFRESH_JWT")];
             if(token === null){
                 if(refreshToken === null) return true;
                 else return false;
@@ -76,7 +78,7 @@ export class AuthService {
     //Access토큰 새로 발급.
     async issueAccessToken(user){
         const payload = { userID: user.userID, sub: user.nickname};
-        return this.jwtService.sign(payload, {expiresIn: '1s'});
+        return this.jwtService.sign(payload, {expiresIn: this.config.get("ACCESS_EXPIRE")});
     }
 
 }

@@ -5,37 +5,25 @@ function jwtInterceptor() {
     instance.defaults.validateStatus = status => status < 500;
 
     instance.interceptors.response.use(async res => {
-        //accessToken 만료
-        if(res.status === 401){
-            const refreshToken = await axios.get('/auth/jwt',{
-                validateStatus: status => status < 500,
-            });
-            //다른 사용자 접속
-            //refreshToken만료에 들어가는 delete auth도 포함해서 새로 접속한 사용자도 로그아웃 되도록 구현.
-            if(refreshToken.status == 409){
-                alert(refreshToken.data.message);
-            }
-            //refreshToken 만료 및 기타 오류
-            if(refreshToken.status >= 400){
-                await axios.delete('/auth');
-                return refreshToken;
-            } 
-            //정상적으로 refreshToken 발급
-            else{
-                const data = await axios(res.config);
-                return data;
-            }
-        }
-        //accessToken 만료가 아닌 다른 오류
-        else if(res.status >= 400){
-            await axios.delete('/auth');
+        //refreshtoken이 만료됐을때
+        if(res.status === 403){
             alert(res.data.message);
-            location.href = '/'
-        } 
-        //정상적인 호출
+            location.href = '/';
+        }
+        //권한이 충족되지 않았을 때
+        else if(res.status === 401){
+            alert(res.data.message);
+            location.href = '/';
+        }
+        //refreshToken이 만료 안되었을 때, accessToken이 만료되었을때
+        //(accessToken 재발급)
+        else if(res.status === 202){
+            alert("다시 시도해 주세요.");
+            location.reload();
+        }
+        //둘다 만료되지 않은 정상 요청이나 기타 다른 오류가 있을 때
         else{
-            const data = await axios(res.config);
-            return data;
+            return res;
         }
     });
     return instance;

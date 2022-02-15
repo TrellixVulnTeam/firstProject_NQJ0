@@ -1,19 +1,19 @@
-import { Controller, Get, Post, HttpException, HttpStatus, HttpCode, Body, Delete, UseGuards, Req, Res, UnauthorizedException, ValidationPipe, Patch, Param, BadRequestException, NotFoundException, ForbiddenException} from '@nestjs/common';
+import { Controller, Get, Post, HttpException, HttpStatus, HttpCode, Body, Delete, UseGuards, Req, Res, UnauthorizedException, ValidationPipe, Patch, Param, BadRequestException, NotFoundException, ForbiddenException, UseFilters, UseInterceptors} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {Request, Response} from 'express'
-import * as fs from 'fs';
-import * as path from 'path';
 import { JwtRefreshGuard } from './strategy/jwt-refresh.guard';
 import { LocalAuthGuard } from './strategy/local-auth.guard';
 import { AuthService } from './auth.service';
 import * as jwt from "jsonwebtoken";
 import { JwtAuthGuard } from './strategy/jwt-access.guard';
+import { RefreshTokenExceptionFilter } from './exceptions/token.f';
+import { JWTInterceptor } from 'src/interceptors/JWTInterceptor';
 
 @Controller('auth')
 export class AuthController {
     constructor(
         private authService: AuthService,
-        private configService: ConfigService,
+        private config: ConfigService,
     ){
         this.handleRefreshToken = authService.handleRefreshToken();
     }
@@ -33,9 +33,9 @@ export class AuthController {
         try{
             const refreshToken = await this.handleRefreshToken.issueToken(req.user);
             const accessToken = await this.authService.issueAccessToken(req.user);
-            res.cookie('accessJWT', accessToken, {
+            res.cookie(this.config.get("ACCESS_JWT"), accessToken, {
                 sameSite: 'lax',
-            }).cookie('refreshJWT', refreshToken, {
+            }).cookie(this.config.get("REFRESH_JWT"), refreshToken, {
                 path: '/auth/jwt',
                 sameSite: 'lax',
             }).send();
@@ -50,28 +50,25 @@ export class AuthController {
     async logoutUser(@Req() req: Request, @Res() res: Response){
         const user = jwt.decode(req.cookies.accessJWT);
         if(user) this.authService.handleRefreshToken().deleteToken(user);
-        res.clearCookie('accessJWT')
-        .clearCookie('refreshJWT', {path:"/auth/jwt"}).send();
+        res.clearCookie(this.config.get("ACCESS_JWT"))
+        .clearCookie(this.config.get("REFRESH_JWT"), {path:"/auth/jwt"}).send();
     }
 
     //Refresh토큰 validate 후 재발급.
     //3번째
     @UseGuards(JwtRefreshGuard)
+    @UseFilters(RefreshTokenExceptionFilter)
     @Get('/jwt')
     async issueAccessToken(@Req() req: Request, @Res() res: Response){
         const accessToken = await this.authService.issueAccessToken(req.user);
-        res.cookie('accessJWT', accessToken, {
-            sameSite: 'lax'
-        }).send();
-    }
-
-    @Get('/:page')
-    async getPage(@Param() params){
-        try{
-            return fs.readFileSync(path.join(this.configService.get('ROOT_PATH'), `/html/auth.${params.page}.html`)).toString('utf-8');
-        }
-        catch(e){
-            throw new NotFoundException();
+        if(req.query.method === "GET"){
+            res.cookie(this.config.get("ACCESS_JWT"), accessToken, {
+                sameSite: 'lax'
+            }).redirect(req.query.location as string);
+        } else{
+            res.cookie(this.config.get("ACCESS_JWT"), accessToken, {
+                sameSite: 'lax'
+            }).status(202).send();
         }
     }
 }

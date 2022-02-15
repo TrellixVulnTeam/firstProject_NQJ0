@@ -15,22 +15,19 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UsersController = void 0;
 const common_1 = require("@nestjs/common");
 const auth_service_1 = require("../auth/auth.service");
-const jwt_access_guard_1 = require("../auth/strategy/jwt-access.guard");
 const users_dto_1 = require("./dto/users.dto");
 const users_service_1 = require("./users.service");
-const path = require("path");
-const fs = require("fs");
 const config_1 = require("@nestjs/config");
-const role_enum_1 = require("../enums/role.enum");
 let UsersController = class UsersController {
     constructor(configService, usersService, authService) {
         this.configService = configService;
         this.usersService = usersService;
         this.authService = authService;
     }
-    async createUser(body) {
+    async createUser(body, res) {
         try {
             await this.usersService.createUser(body);
+            res.send({ message: "성공적으로 회원가입이 되었습니다." });
         }
         catch (e) {
             throw new common_1.HttpException(e.message, common_1.HttpStatus.BAD_REQUEST);
@@ -63,25 +60,17 @@ let UsersController = class UsersController {
             throw new common_1.BadRequestException(e.message);
         }
     }
-    async getPage(params, query) {
-        try {
-            return fs.readFileSync(path.join(this.configService.get('ROOT_PATH'), `/html/users.${params.page}.html`)).toString('utf-8');
-        }
-        catch (e) {
-            throw new common_1.NotFoundException();
-        }
-    }
 };
 __decorate([
-    (0, common_1.Post)('/signup'),
+    (0, common_1.Post)(),
     (0, common_1.HttpCode)(201),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Res)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [users_dto_1.CreateUserDto]),
+    __metadata("design:paramtypes", [users_dto_1.CreateUserDto, Object]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "createUser", null);
 __decorate([
-    (0, role_enum_1.Roles)(role_enum_1.Role.User),
     (0, common_1.Patch)('/password'),
     (0, common_1.HttpCode)(200),
     __param(0, (0, common_1.Body)()),
@@ -91,7 +80,6 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "updatePasswordUser", null);
 __decorate([
-    (0, role_enum_1.Roles)(role_enum_1.Role.User),
     (0, common_1.Patch)('/nickname'),
     (0, common_1.HttpCode)(200),
     __param(0, (0, common_1.Body)()),
@@ -100,14 +88,6 @@ __decorate([
     __metadata("design:paramtypes", [users_dto_1.UpdateNicknameUserDto, Object]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "updateNicknameUser", null);
-__decorate([
-    (0, common_1.Get)('/:page'),
-    __param(0, (0, common_1.Param)()),
-    __param(1, (0, common_1.Query)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
-    __metadata("design:returntype", Promise)
-], UsersController.prototype, "getPage", null);
 UsersController = __decorate([
     (0, common_1.Controller)('users'),
     __metadata("design:paramtypes", [config_1.ConfigService,

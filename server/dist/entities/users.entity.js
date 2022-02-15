@@ -11,7 +11,6 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UsersEntity = void 0;
 const typeorm_1 = require("typeorm");
-const books_entity_1 = require("./books.entity");
 let UsersEntity = class UsersEntity {
 };
 __decorate([
@@ -38,15 +37,6 @@ __decorate([
     }),
     __metadata("design:type", String)
 ], UsersEntity.prototype, "refreshJWT", void 0);
-__decorate([
-    (0, typeorm_1.Column)(),
-    (0, typeorm_1.OneToOne)(type => books_entity_1.BooksEntity, favoriteBookID => favoriteBookID.bookID),
-    __metadata("design:type", Number)
-], UsersEntity.prototype, "favoriteBookID", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ type: 'text' }),
-    __metadata("design:type", String)
-], UsersEntity.prototype, "statusMessage", void 0);
 UsersEntity = __decorate([
     (0, typeorm_1.Entity)({
         name: 'users'

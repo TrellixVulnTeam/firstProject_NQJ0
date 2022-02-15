@@ -1,15 +1,16 @@
 import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
-import fs =  require("fs");
 import * as path from 'path';
 import cookieParser = require('cookie-parser');
 import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { NotFoundExceptionFilter } from './filter/not-found.filter';
+import { ConfigService } from '@nestjs/config';
+import { AccessTokenExceptionFilter } from './auth/exceptions/token.f';
 
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const config = app.get(ConfigService);
   app.use(cookieParser());
   app.useGlobalPipes(
     new ValidationPipe({
@@ -21,7 +22,7 @@ async function bootstrap() {
       transform: true,
     })
   )
-  app.useGlobalFilters(new NotFoundExceptionFilter());
+  app.useGlobalFilters(new AccessTokenExceptionFilter());
   app.useStaticAssets(path.join(__dirname,'..','..','client', 'public'));
   app.setBaseViewsDir(path.join(__dirname,'..','..','client', 'public', 'views'))
   app.setViewEngine("hbs");

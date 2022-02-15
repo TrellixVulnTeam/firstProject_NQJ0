@@ -18,7 +18,6 @@ const authors_service_1 = require("./authors.service");
 const fs = require("fs");
 const path = require("path");
 const config_1 = require("@nestjs/config");
-const role_enum_1 = require("../enums/role.enum");
 let AuthorsController = class AuthorsController {
     constructor(authorsService, configService) {
         this.authorsService = authorsService;
@@ -57,7 +56,6 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AuthorsController.prototype, "getAuthors", null);
 __decorate([
-    (0, role_enum_1.Roles)(role_enum_1.Role.Admin),
     (0, common_1.Post)(),
     (0, common_1.HttpCode)(201),
     __param(0, (0, common_1.Body)()),

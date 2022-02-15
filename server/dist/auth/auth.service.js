@@ -19,10 +19,12 @@ const jwt_1 = require("@nestjs/jwt");
 const typeorm_2 = require("typeorm");
 const crypto_1 = require("crypto");
 const users_entity_1 = require("../entities/users.entity");
+const config_1 = require("@nestjs/config");
 let AuthService = class AuthService {
-    constructor(usersRepository, jwtService) {
+    constructor(usersRepository, jwtService, config) {
         this.usersRepository = usersRepository;
         this.jwtService = jwtService;
+        this.config = config;
     }
     async validateUser(user) {
         const ret = await this.usersRepository.createQueryBuilder()
@@ -36,7 +38,7 @@ let AuthService = class AuthService {
     handleRefreshToken() {
         const issueToken = async (user) => {
             const payload = { userID: user.userID, sub: user.nickname };
-            const refreshToken = this.jwtService.sign(payload, { expiresIn: '5s' });
+            const refreshToken = this.jwtService.sign(payload, { expiresIn: this.config.get("REFRESH_EXPIRE") });
             (0, crypto_1.pbkdf2)(refreshToken, user.userID, 100, 64, 'sha512', async (err, key) => {
                 if (err) {
                     throw err;
@@ -44,7 +46,7 @@ let AuthService = class AuthService {
                 await this.usersRepository.createQueryBuilder()
                     .update()
                     .where(`userID = :keyID`, { keyID: user.userID })
-                    .set({ refreshJWT: key.toString('base64') })
+                    .set({ [this.config.get("REFRESH_JWT")]: key.toString('base64') })
                     .execute();
             });
             return refreshToken;
@@ -53,15 +55,15 @@ let AuthService = class AuthService {
             await this.usersRepository.createQueryBuilder()
                 .update()
                 .where(`userID= :keyID`, { keyID: user.userID })
-                .set({ refreshJWT: null })
+                .set({ [this.config.get("REFRESH_JWT")]: null })
                 .execute();
         };
         const compareToken = async (user, token) => {
             const query = await this.usersRepository.createQueryBuilder()
-                .select(`refreshJWT`)
+                .select(this.config.get("REFRESH_JWT"))
                 .where(`userID = :keyID`, { keyID: user.userID })
                 .getRawOne();
-            const refreshToken = query['refreshJWT'];
+            const refreshToken = query[this.config.get("REFRESH_JWT")];
             if (token === null) {
                 if (refreshToken === null)
                     return true;
@@ -82,14 +84,15 @@ let AuthService = class AuthService {
     }
     async issueAccessToken(user) {
         const payload = { userID: user.userID, sub: user.nickname };
-        return this.jwtService.sign(payload, { expiresIn: '1s' });
+        return this.jwtService.sign(payload, { expiresIn: this.config.get("ACCESS_EXPIRE") });
     }
 };
 AuthService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(users_entity_1.UsersEntity)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
-        jwt_1.JwtService])
+        jwt_1.JwtService,
+        config_1.ConfigService])
 ], AuthService);
 exports.AuthService = AuthService;
 //# sourceMappingURL=auth.service.js.map

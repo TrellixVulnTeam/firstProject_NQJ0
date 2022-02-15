@@ -15,7 +15,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthorsService = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
-const authors_entity_1 = require("../entities/authors.entity");
 const typeorm_2 = require("typeorm");
 let AuthorsService = class AuthorsService {
     constructor(authorsRepository) {
@@ -31,7 +30,7 @@ let AuthorsService = class AuthorsService {
         await this.checkDuplicatedAuthor(dto.author);
         await this.authorsRepository.createQueryBuilder()
             .insert()
-            .into(authors_entity_1.AuthorsEntity)
+            .into(AuthorsEntity)
             .values(dto)
             .execute();
         return true;
@@ -48,7 +47,7 @@ let AuthorsService = class AuthorsService {
 };
 AuthorsService = __decorate([
     (0, common_1.Injectable)(),
-    __param(0, (0, typeorm_1.InjectRepository)(authors_entity_1.AuthorsEntity)),
+    __param(0, (0, typeorm_1.InjectRepository)(AuthorsEntity)),
     __metadata("design:paramtypes", [typeorm_2.Repository])
 ], AuthorsService);
 exports.AuthorsService = AuthorsService;

@@ -15,55 +15,102 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.BooksService = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
-const books_entity_1 = require("../entities/books.entity");
-const read_entity_1 = require("../entities/read.entity");
+const book_entity_1 = require("../entities/book.entity");
+const comment_entity_1 = require("../entities/comment.entity");
+const likecomment_entity_1 = require("../entities/likecomment.entity");
 const typeorm_2 = require("typeorm");
 let BooksService = class BooksService {
-    constructor(booksRepository, readRepository) {
-        this.booksRepository = booksRepository;
-        this.readRepository = readRepository;
+    constructor(bookRepository, commentRepository, likeCommentRepository) {
+        this.bookRepository = bookRepository;
+        this.commentRepository = commentRepository;
+        this.likeCommentRepository = likeCommentRepository;
     }
     async getBooksList(dto) {
-        const res = await this.booksRepository.createQueryBuilder('books')
-            .select([`books.bookID AS bookID`, 'books.title AS title',
-            'books.author AS author', 'COUNT(IF(read.like = 1, 1, null)) AS `like`',
-            'COUNT(readID) AS `read`'])
-            .leftJoin(`read`, `read`, `books.bookID = read.bookID`)
-            .groupBy('books.bookID')
+        const res = await this.bookRepository.createQueryBuilder()
+            .select()
             .offset(dto.offset)
-            .limit(dto.limit).getRawMany();
+            .limit(dto.limit).getMany();
         return res;
     }
-    async getBookInfoByID(id) {
-        const res = await this.booksRepository.createQueryBuilder()
-            .where('bookID = :keyBookID', { keyBookID: id })
+    async getBookInfoByID(bookID) {
+        const res = await this.bookRepository.createQueryBuilder()
+            .where('ID = :keyBookID', { keyBookID: bookID })
             .getOne();
         return res;
     }
     async postBook(dto) {
         await this.checkDuplicatedBook(dto.title, dto.author);
-        return (await this.booksRepository.createQueryBuilder()
+        return (await this.bookRepository.createQueryBuilder()
             .insert()
-            .into(books_entity_1.BooksEntity)
+            .into(book_entity_1.BookEntity)
             .values(dto)
             .execute()).raw.affectedRows;
     }
     async checkDuplicatedBook(title, author) {
-        const res = await this.booksRepository.createQueryBuilder()
+        const res = await this.bookRepository.createQueryBuilder()
             .select()
             .where(`title = :keyTitle`, { keyTitle: title })
             .andWhere(`author = :keyAuthor`, { keyAuthor: author })
             .getOne();
         if (res) {
-            throw new Error(`이미 존재하는 책입니다. 책 번호 = ${res.bookID}`);
+            throw new Error(`이미 존재하는 책입니다. 책 번호 = ${res.ID}`);
         }
+    }
+    async getComments(userID, bookID) {
+        const entity = await this.commentRepository.createQueryBuilder("comment")
+            .where("comment.bookID = :keyBookID", { keyBookID: bookID })
+            .leftJoinAndSelect("comment.like", "like")
+            .getMany();
+        const res = [];
+        entity.forEach(comment => {
+            const model = new comment_entity_1.CommentModel(comment, userID);
+            res.push(model);
+        });
+        return res;
+    }
+    async postComment(dto) {
+        const isSuccessed = (await this.commentRepository.createQueryBuilder()
+            .insert()
+            .into(comment_entity_1.CommentEntity)
+            .values(dto)
+            .execute()).raw.affectedRows;
+        console.log(`in postComment = ${isSuccessed}`);
+        if (isSuccessed) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+    async deleteComment(commentID) {
+        const isSuccessed = (await this.commentRepository.createQueryBuilder()
+            .delete()
+            .from(comment_entity_1.CommentEntity)
+            .where(`ID= ${commentID}`)
+            .execute());
+    }
+    async postCommentLike(commentID, userID) {
+        await this.likeCommentRepository.createQueryBuilder()
+            .insert()
+            .values([
+            { commentID, userID }
+        ]).execute();
+    }
+    async deleteCommentLike(commentID, userID) {
+        await this.likeCommentRepository.createQueryBuilder()
+            .delete()
+            .where(`commentID = :keyCommentID`, { keyCommentID: commentID })
+            .andWhere(`userID = :keyUserID`, { keyUserID: userID })
+            .execute();
     }
 };
 BooksService = __decorate([
     (0, common_1.Injectable)(),
-    __param(0, (0, typeorm_1.InjectRepository)(books_entity_1.BooksEntity)),
-    __param(1, (0, typeorm_1.InjectRepository)(read_entity_1.ReadEntity)),
+    __param(0, (0, typeorm_1.InjectRepository)(book_entity_1.BookEntity)),
+    __param(1, (0, typeorm_1.InjectRepository)(comment_entity_1.CommentEntity)),
+    __param(2, (0, typeorm_1.InjectRepository)(likecomment_entity_1.LikeCommentEntity)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository])
 ], BooksService);
 exports.BooksService = BooksService;

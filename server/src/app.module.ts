@@ -9,7 +9,6 @@ import fs = require('fs');
 import { join } from 'path';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
-import { AuthorsModule } from './authors/authors.module';
 
 const pw = fs.readFileSync('C:\\mysql.txt', 'utf-8');
 
@@ -30,7 +29,7 @@ const pw = fs.readFileSync('C:\\mysql.txt', 'utf-8');
     ServeStaticModule.forRoot({
       rootPath: join(__dirname,'..','..','client', 'public')
     }),
-    BooksModule, UsersModule, AuthModule, AuthorsModule], 
+    BooksModule, UsersModule, AuthModule], 
   controllers: [AppController],
   providers: [AppService],
 })

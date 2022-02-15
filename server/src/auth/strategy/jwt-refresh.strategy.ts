@@ -2,30 +2,28 @@ import { ConflictException, ForbiddenException, HttpException, Injectable, Unaut
 import { ConfigService } from "@nestjs/config";
 import { PassportStrategy } from "@nestjs/passport";
 import { Request } from "express";
-import { TokenExpiredError } from "jsonwebtoken";
-import { ExtractJwt, Strategy } from "passport-jwt";
+import { Strategy } from "passport-jwt";
 import { AuthService } from "../auth.service";
-import { TokenException } from "../exceptions/token.e";
+import { RefreshTokenException } from "../exceptions/token.e";
 
-const extractFromCookie = req => {
+const extractFromCookie = (req, config: ConfigService) => {
     let refreshJWT = null;
-    if(req?.cookies){
-        refreshJWT = req.cookies['refreshJWT'];
-    }
+    refreshJWT = req?.cookies[config.get("REFRESH_JWT")];
     //refreshToken이 아예 존재하지 않을 때,
+    if(!refreshJWT) throw new RefreshTokenException("로그인 후 이용 가능합니다.");
     return refreshJWT;
 }
 
 @Injectable()
 export class JwtRefreshStrategy extends PassportStrategy(Strategy,'refreshJWT'){
     constructor(
-        private configService: ConfigService,
+        private config: ConfigService,
         private authService: AuthService,
         ){
         super({
-            jwtFromRequest: extractFromCookie,
+            jwtFromRequest: (req) => extractFromCookie(req, config),
             ignoreExpiration: true,
-            secretOrKey: configService.get('SECRET_KEY'),
+            secretOrKey: config.get('SECRET_KEY'),
             passReqToCallback: true,
         })
     }
@@ -34,10 +32,10 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy,'refreshJWT'){
     async validate(req: Request, payload: any){
         const user = {userID: payload.userID, nickname: payload.sub};
         if(!(await this.authService.handleRefreshToken().compareToken(user, req?.cookies?.refreshJWT))){
-            throw new ConflictException('다른 사용자가 로그인하였습니다.');
+            throw new RefreshTokenException('다른 사용자가 로그인하였습니다.');
         } else{
             if(payload.exp * 1000 < Date.now()){
-                throw new TokenException();
+                throw new RefreshTokenException();
             }
             return user;
         }

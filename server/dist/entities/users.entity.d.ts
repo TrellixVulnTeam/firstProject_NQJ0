@@ -3,6 +3,4 @@ export declare class UsersEntity {
     password: string;
     nickname: string;
     refreshJWT: string;
-    favoriteBookID: number;
-    statusMessage: string;
 }

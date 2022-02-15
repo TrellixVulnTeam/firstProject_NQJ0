@@ -1,5 +1,5 @@
 import { Column, Entity, OneToOne, PrimaryColumn } from "typeorm";
-import { BooksEntity } from "./books.entity";
+import { BookEntity } from "./book.entity";
 
 @Entity({
     name: 'users'
@@ -21,9 +21,4 @@ export class UsersEntity {
         length: 50,
     })
     refreshJWT: string;
-    @Column()
-    @OneToOne(type => BooksEntity, favoriteBookID => favoriteBookID.bookID)
-    favoriteBookID: number;
-    @Column({type: 'text'})
-    statusMessage: string;
 }

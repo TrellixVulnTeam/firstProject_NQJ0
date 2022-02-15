@@ -16,33 +16,33 @@ const passport_1 = require("@nestjs/passport");
 const passport_jwt_1 = require("passport-jwt");
 const auth_service_1 = require("../auth.service");
 const token_e_1 = require("../exceptions/token.e");
-const extractFromCookie = req => {
+const extractFromCookie = (req, config) => {
     let refreshJWT = null;
-    if (req === null || req === void 0 ? void 0 : req.cookies) {
-        refreshJWT = req.cookies['refreshJWT'];
-    }
+    refreshJWT = req === null || req === void 0 ? void 0 : req.cookies[config.get("REFRESH_JWT")];
+    if (!refreshJWT)
+        throw new token_e_1.RefreshTokenException("로그인 후 이용 가능합니다.");
     return refreshJWT;
 };
 let JwtRefreshStrategy = class JwtRefreshStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy, 'refreshJWT') {
-    constructor(configService, authService) {
+    constructor(config, authService) {
         super({
-            jwtFromRequest: extractFromCookie,
+            jwtFromRequest: (req) => extractFromCookie(req, config),
             ignoreExpiration: true,
-            secretOrKey: configService.get('SECRET_KEY'),
+            secretOrKey: config.get('SECRET_KEY'),
             passReqToCallback: true,
         });
-        this.configService = configService;
+        this.config = config;
         this.authService = authService;
     }
     async validate(req, payload) {
         var _a;
         const user = { userID: payload.userID, nickname: payload.sub };
         if (!(await this.authService.handleRefreshToken().compareToken(user, (_a = req === null || req === void 0 ? void 0 : req.cookies) === null || _a === void 0 ? void 0 : _a.refreshJWT))) {
-            throw new common_1.ConflictException('다른 사용자가 로그인하였습니다.');
+            throw new token_e_1.RefreshTokenException('다른 사용자가 로그인하였습니다.');
         }
         else {
             if (payload.exp * 1000 < Date.now()) {
-                throw new token_e_1.TokenException();
+                throw new token_e_1.RefreshTokenException();
             }
             return user;
         }

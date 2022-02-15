@@ -14,14 +14,15 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BooksController = void 0;
 const common_1 = require("@nestjs/common");
-const config_1 = require("@nestjs/config");
-const role_enum_1 = require("../enums/role.enum");
+const jwt_access_guard_1 = require("../auth/strategy/jwt-access.guard");
+const roles_decorator_1 = require("../auth/strategy/roles.decorator");
+const roles_guard_1 = require("../auth/strategy/roles.guard");
+const JWTInterceptor_1 = require("../interceptors/JWTInterceptor");
 const books_service_1 = require("./books.service");
-const books_dto_1 = require("./dto/books.dto");
+const book_dto_1 = require("./dto/book.dto");
 let BooksController = class BooksController {
-    constructor(booksService, configService) {
+    constructor(booksService) {
         this.booksService = booksService;
-        this.configService = configService;
     }
     async getBooksList(offset, limit) {
         try {
@@ -44,12 +45,53 @@ let BooksController = class BooksController {
         }
     }
     async getBookInfo(bookID, req, res) {
-    }
-    async getBookInfoPage(bookID) {
         const model = await this.booksService.getBookInfoByID(bookID);
         if (!model)
             throw new common_1.NotFoundException();
-        return model;
+        res.send(model);
+    }
+    async getBookInfoPage(bookID) {
+        return { bookID };
+    }
+    async getBookComment(bookID, req, res) {
+        var _a;
+        const comments = await this.booksService.getComments((_a = req.user) === null || _a === void 0 ? void 0 : _a.userID, bookID);
+        res.send(comments);
+    }
+    async postBookComment(bookID, req, res) {
+        const dto = {
+            bookID,
+            userID: req.user.userID,
+            text: req.body.text
+        };
+        try {
+            const isSuccessed = await this.booksService.postComment(dto);
+            if (!isSuccessed) {
+                throw new common_1.HttpException("요청이 잘못되었습니다.", common_1.HttpStatus.BAD_REQUEST);
+            }
+            res.send();
+        }
+        catch (e) {
+            throw new common_1.HttpException(e, common_1.HttpStatus.BAD_REQUEST);
+        }
+    }
+    async deleteBookComment(commentID, req, res) {
+        try {
+            const isSuccessed = await this.booksService.deleteComment(commentID);
+            res.send();
+        }
+        catch (e) {
+            console.log(e);
+            throw new common_1.HttpException(e, common_1.HttpStatus.BAD_REQUEST);
+        }
+    }
+    async postCommentLike(commentID, req, res) {
+        await this.booksService.postCommentLike(commentID, req.user.userID);
+        res.send();
+    }
+    async deleteCommentLike(commentID, req, res) {
+        await this.booksService.deleteCommentLike(commentID, req.user.userID);
+        res.send();
     }
 };
 __decorate([
@@ -65,7 +107,7 @@ __decorate([
     (0, common_1.Post)(),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [books_dto_1.PostBookDto]),
+    __metadata("design:paramtypes", [book_dto_1.PostBookDto]),
     __metadata("design:returntype", Promise)
 ], BooksController.prototype, "postBook", null);
 __decorate([
@@ -78,17 +120,66 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], BooksController.prototype, "getBookInfo", null);
 __decorate([
-    (0, common_1.Get)('/page/info/:bookID'),
+    (0, common_1.Get)('/pages/info/:bookID'),
     (0, common_1.Render)('bookinfo.hbs'),
     __param(0, (0, common_1.Param)('bookID')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], BooksController.prototype, "getBookInfoPage", null);
+__decorate([
+    (0, common_1.Get)('/comments/:bookID'),
+    (0, common_1.UseInterceptors)(JWTInterceptor_1.JWTInterceptor),
+    __param(0, (0, common_1.Param)('bookID')),
+    __param(1, (0, common_1.Req)()),
+    __param(2, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Object, Object]),
+    __metadata("design:returntype", Promise)
+], BooksController.prototype, "getBookComment", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_access_guard_1.JwtAuthGuard),
+    (0, common_1.Post)('/comment/:bookID'),
+    __param(0, (0, common_1.Param)('bookID')),
+    __param(1, (0, common_1.Req)()),
+    __param(2, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Object, Object]),
+    __metadata("design:returntype", Promise)
+], BooksController.prototype, "postBookComment", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_access_guard_1.JwtAuthGuard),
+    (0, common_1.Delete)('/comment/:commentID'),
+    __param(0, (0, common_1.Param)('commentID')),
+    __param(1, (0, common_1.Req)()),
+    __param(2, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Object, Object]),
+    __metadata("design:returntype", Promise)
+], BooksController.prototype, "deleteBookComment", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_access_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, common_1.Post)('/comments/like/:commentID'),
+    __param(0, (0, common_1.Param)('commentID')),
+    __param(1, (0, common_1.Req)()),
+    __param(2, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Object, Object]),
+    __metadata("design:returntype", Promise)
+], BooksController.prototype, "postCommentLike", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_access_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, common_1.Delete)('/comments/like/:commentID'),
+    __param(0, (0, common_1.Param)('commentID')),
+    __param(1, (0, common_1.Req)()),
+    __param(2, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Object, Object]),
+    __metadata("design:returntype", Promise)
+], BooksController.prototype, "deleteCommentLike", null);
 BooksController = __decorate([
-    (0, common_1.Controller)('book'),
-    __metadata("design:paramtypes", [books_service_1.BooksService,
-        config_1.ConfigService])
+    (0, common_1.Controller)('books'),
+    __metadata("design:paramtypes", [books_service_1.BooksService])
 ], BooksController);
 exports.BooksController = BooksController;
 //# sourceMappingURL=books.controller.js.map

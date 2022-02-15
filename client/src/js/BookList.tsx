@@ -5,7 +5,7 @@ import "../scss/BookList.scss";
 
 
 interface IBook {
-    bookID: String;
+    ID: String;
     title: String;
     author: String;
 }
@@ -24,7 +24,7 @@ const BookDiv = () => {
     const [load, setLoad] = useState(0);
     const [books, setBooks] = useState(null);
     useEffect(() => {
-        axios.get(`/book?offset=${BooksCountPerLoad * (load)}&limit=${BooksCountPerLoad}`).then(res => {
+        axios.get(`/books?offset=${BooksCountPerLoad * (load)}&limit=${BooksCountPerLoad}`).then(res => {
             setBooks(res.data);
         })
     }, [load])
@@ -51,7 +51,7 @@ const BookList = ({books, page}: IBookPage) => {
 
 const Book = (book: IBook) => {
     const onClickBook = () => {
-        location.href = `/page/bookinfo/${book.bookID}`
+        location.href = `/books/pages/info/${book.ID}`
     }
     return <>
         <div className="book" onClick={onClickBook}>
